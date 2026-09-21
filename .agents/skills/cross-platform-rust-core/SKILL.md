@@ -12,6 +12,12 @@ metadata:
 
 Build one Rust core and consume it from three hosts: Android (Kotlin/Compose), Apple (Swift/SwiftUI), and a Node push service. All version pins were verified against primary sources on **2026-09-19**.
 
+## What this architecture is for
+
+Four reasons to pay the FFI cost: **reusability** (one implementation of the domain, not three that drift), **testability** (the logic is plain Rust, tested without a device or an emulator), **standardization** (one set of rules and versions across Apple, Android, and the server), and **native UI freedom** (each platform keeps its own idiomatic UI).
+
+**Non-goals — these are design choices, not gaps.** This is *not* write-once-run-anywhere, and it is *not* a shared UI layer: the UI is deliberately native per platform and is never shared. The core is shared **logic, not data** — it holds no persistence and no IO (rule 3). If the request is really "one UI everywhere," this skill is the wrong tool and React Native or Flutter is the right one.
+
 ## Architecture in one paragraph
 
 A single Rust crate holds domain logic only. UniFFI generates first-party Kotlin and Swift bindings from it. A NAPI-RS addon exposes the same crate to a Node service, which runs BullMQ on Redis and delivers notifications through APNs and FCM. **The core performs no IO** — no database, no filesystem, no network. Hosts own all IO and pass owned data in and out.

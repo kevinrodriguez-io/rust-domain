@@ -9,6 +9,31 @@ Verified 2026-09-19. The architectural rule: **data is not part of the core, onl
 - No cross-platform file path, sandbox, or encryption-at-rest abstraction in the core.
 - Core tests need no device, no database, and no FFI — plain `cargo test`.
 
+## Crate layout: a pure core plus one adapter per generator
+
+The structural rule behind everything else on this page:
+
+```
+core/                 # pure domain logic. NO binding attributes of any kind.
+bindings/uniffi/      # UniFFI adapter — cdylib + staticlib, consumed by Apple and Android
+bindings/napi/        # NAPI-RS adapter — consumed by the Node service
+```
+
+**The core carries no `#[napi]`, and ideally no binding attributes at all.** The `#[napi]` half is not negotiable: `#[napi(object)]` is a derive, so putting it on a core type forces the core crate to depend on `napi` — and that crate is also compiled for four Android ABIs and linked into an XCFramework. A host-binding dependency has no business in either artifact.
+
+Each generator reaches core types differently, and the asymmetry is worth knowing because it decides how much code you write:
+
+| Generator | Mechanism | Cost |
+|---|---|---|
+| **UniFFI** | *Remote types* — "types defined in other crates that do not use UniFFI." Write a mirrored **declaration** wrapped in `#[uniffi::remote(Record)]` / `#[uniffi::remote(Enum)]` | Declaration only. No conversion code, because it is still the same type |
+| **NAPI-RS** | No equivalent. Real mirror structs with `#[napi(object)]` plus `From` impls in both directions | Duplicated types and conversions that can drift |
+
+Both exist for the same reason — Rust's orphan rule means an adapter crate cannot implement a foreign trait (`FromNapiValue`, or UniFFI's converters) for a foreign type. UniFFI names the orphan rule explicitly in [its remote-types docs](https://github.com/mozilla/uniffi-rs/blob/v0.32.1/docs/manual/src/types/remote_ext_types.md); NAPI-RS simply requires the derive on the defining crate. See node-napi.md for the worked mirror-type pattern and the serialized-payload alternative.
+
+**This is the strongest practical argument for the narrow, coarse boundary below.** Every type that crosses into Node costs a mirror struct and two conversions. A chatty interface multiplies that cost; a command/result interface with a handful of types barely pays it.
+
+> **Note on the other reference files:** `rust-core-uniffi.md` and `bootstrap.md` show `#[uniffi::export]` and `uniffi::setup_scaffolding!()` directly on the `core` crate. That is the simpler arrangement and it is fine for a UniFFI-only project, but once the NAPI adapter exists the split above is the correct layout. Treat those samples as showing the UniFFI mechanics rather than the final crate topology.
+
 ## Prefer command/result over a callback port
 
 There are two ways to express "the host owns IO". They are not equally good.
@@ -31,6 +56,8 @@ pub fn plan_notifications(
 - Matches what the rule actually says: the core *manages* data, it does not fetch it.
 
 Recursive enums (0.32.0) and methods on records/enums (0.31.0) make rich command and result types ergonomic, so this style does not force anaemic structs.
+
+The types in that signature are **core** types. Apple and Android reach them through UniFFI; the Node adapter needs a `#[napi(object)]` mirror plus `From` conversions for each one, per the table above. That is the per-type toll on the Node boundary, and it is why `plan_notifications` takes two vectors rather than exposing a dozen fine-grained calls.
 
 ### Fallback: foreign trait port
 

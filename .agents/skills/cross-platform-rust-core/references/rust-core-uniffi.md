@@ -2,6 +2,8 @@
 
 Verified 2026-09-19 against UniFFI 0.32.1. Pins in versions.md.
 
+**Crate layout:** the samples below put UniFFI attributes directly on `core`, which is the simplest arrangement for a UniFFI-only project. Once the NAPI adapter exists, the correct topology is a pure `core` with no binding attributes plus one adapter crate per generator, using UniFFI's `#[uniffi::remote(...)]` for core types — see core-purity-and-io.md.
+
 ## Crate setup
 
 ```toml
