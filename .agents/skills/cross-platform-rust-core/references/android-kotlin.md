@@ -2,6 +2,8 @@
 
 Verified 2026-09-19. Pins in versions.md.
 
+**Ownership:** the human creates the Android Studio project and app module; the agent owns `*.gradle.kts`, the `cargo-ndk` build, and generated Kotlin, and never edits `.idea/` — see [bootstrap.md](bootstrap.md).
+
 ## AGP 9 changed the rules — read this before copying any older guide
 
 AGP 9.0 (January 2026) introduced breaking changes that invalidate most pre-2026 Android+Rust material.

@@ -2,6 +2,8 @@
 
 Verified 2026-09-19. Pins in versions.md.
 
+**Ownership:** the human creates the Xcode project and target and adds the package through Xcode; the agent owns `Package.swift`, the XCFramework build, and generated Swift, and never edits `project.pbxproj` — see [bootstrap.md](bootstrap.md).
+
 ## Host requirement is strict
 
 **Xcode 27 requires macOS Tahoe 26.6 or later.** There is no workaround. A CI runner on an older macOS cannot build this leg, and Linux cannot build it at all.
