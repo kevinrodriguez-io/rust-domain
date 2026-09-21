@@ -2,7 +2,7 @@
 
 Verified 2026-09-19 against UniFFI 0.32.1. Pins in versions.md.
 
-**Crate layout:** the samples below put UniFFI attributes directly on `core`, which is the simplest arrangement for a UniFFI-only project. Once the NAPI adapter exists, the correct topology is a pure `core` with no binding attributes plus one adapter crate per generator, using UniFFI's `#[uniffi::remote(...)]` for core types — see core-purity-and-io.md.
+**Crate layout:** UniFFI attributes belong on the `core` crate, exactly as the samples below show, and that stays true once the NAPI adapter exists. The derives are inert, and two of the three hosts consume UniFFI, so relocating them into an adapter would add duplication rather than remove it. **Only the Node adapter mirrors types** — see core-purity-and-io.md for the full reasoning and the optional feature-gate route.
 
 ## Crate setup
 
@@ -39,7 +39,7 @@ Proc-macros are the recommended path. UniFFI's own docs call generating from a s
 Two proc-macro gotchas:
 
 - **`#[cfg()]` does not work inside a `#[uniffi::export]` block.** Scaffolding is generated regardless and you get compile errors. Put `#[cfg()]` *outside*, using separate export blocks per platform.
-- To make UniFFI optional behind a feature, use `#[cfg_attr(feature = "uniffi", uniffi::export)]`. This is worth doing — it keeps the door open for a second binding facade later without forking the core.
+- To make the UniFFI attributes themselves optional, use `#[cfg_attr(feature = "uniffi", uniffi::export)]`. This is the **optional** route to a core with no binding attributes compiled in, for the case where a consumer genuinely cannot carry the transitive dependency. It is not the default, and it is preferable to mirroring types into a separate adapter — see core-purity-and-io.md.
 
 ## The bindgen binary — build it in your workspace
 

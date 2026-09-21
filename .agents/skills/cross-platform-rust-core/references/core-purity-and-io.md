@@ -9,30 +9,41 @@ Verified 2026-09-19. The architectural rule: **data is not part of the core, onl
 - No cross-platform file path, sandbox, or encryption-at-rest abstraction in the core.
 - Core tests need no device, no database, and no FFI — plain `cargo test`.
 
-## Crate layout: a pure core plus one adapter per generator
-
-The structural rule behind everything else on this page:
+## Crate layout: UniFFI derives on the core, mirrors only for NAPI
 
 ```
-core/                 # pure domain logic. NO binding attributes of any kind.
-bindings/uniffi/      # UniFFI adapter — cdylib + staticlib, consumed by Apple and Android
-bindings/napi/        # NAPI-RS adapter — consumed by the Node service
+core/                 # domain logic + UniFFI derives. No napi. No IO.
+bindings/napi/        # NAPI-RS adapter — mirror types + From conversions
 ```
 
-**The core carries no `#[napi]`, and ideally no binding attributes at all.** The `#[napi]` half is not negotiable: `#[napi(object)]` is a derive, so putting it on a core type forces the core crate to depend on `napi` — and that crate is also compiled for four Android ABIs and linked into an XCFramework. A host-binding dependency has no business in either artifact.
+**This asymmetry is deliberate. Do not "fix" it by making the core binding-free.** Three reasons:
 
-Each generator reaches core types differently, and the asymmetry is worth knowing because it decides how much code you write:
+1. **UniFFI derives are inert.** They expand to trait impls and metadata — no IO, no runtime behaviour, nothing that executes unless a binding calls in. So `uniffi` in the core's dependency graph does **not** violate rule 3, and the sanity-check grep is deliberately a list of **IO** crates (`sqlx`, `rusqlite`, `reqwest`, …), not binding crates. A binding crate is not an IO crate.
+2. **Two of the three hosts consume UniFFI.** Apple and Android both go through it. Moving its derives into an adapter would make the *majority* path pay a mirrored declaration per domain type purely to look symmetric with the *minority* path — which **maximizes** total duplication instead of minimizing it.
+3. **The tools are genuinely asymmetric, so the layout should be too.** UniFFI is first-party for both mobile hosts *and* has remote types for the case where a crate cannot carry its derives. NAPI-RS is neither. Mirroring for the one host that requires it is the minimum, not a compromise.
 
-| Generator | Mechanism | Cost |
+`napi` stays out of the core for the mirror-image reason: it serves exactly one of the three hosts, so putting its derives on core would pull a Node-oriented binding crate into the artifacts built for four Android ABIs and an XCFramework, and would buy nothing the single adapter crate does not already give you.
+
+| Host | Reaches core types via | Mirror cost |
 |---|---|---|
-| **UniFFI** | *Remote types* — "types defined in other crates that do not use UniFFI." Write a mirrored **declaration** wrapped in `#[uniffi::remote(Record)]` / `#[uniffi::remote(Enum)]` | Declaration only. No conversion code, because it is still the same type |
-| **NAPI-RS** | No equivalent. Real mirror structs with `#[napi(object)]` plus `From` impls in both directions | Duplicated types and conversions that can drift |
+| Apple (Swift) | UniFFI derives on the core directly | none |
+| Android (Kotlin) | UniFFI derives on the core directly | none |
+| Node service | `#[napi(object)]` mirror + `From` both ways in `bindings/napi` | one mirror per crossing type |
 
-Both exist for the same reason — Rust's orphan rule means an adapter crate cannot implement a foreign trait (`FromNapiValue`, or UniFFI's converters) for a foreign type. UniFFI names the orphan rule explicitly in [its remote-types docs](https://github.com/mozilla/uniffi-rs/blob/v0.32.1/docs/manual/src/types/remote_ext_types.md); NAPI-RS simply requires the derive on the defining crate. See node-napi.md for the worked mirror-type pattern and the serialized-payload alternative.
+The underlying constraint is the same in both directions — Rust's orphan rule means an adapter crate cannot implement a foreign trait (`FromNapiValue`, or UniFFI's converters) for a foreign type. UniFFI names the orphan rule explicitly in [its remote-types docs](https://github.com/mozilla/uniffi-rs/blob/v0.32.1/docs/manual/src/types/remote_ext_types.md) and offers an escape from it; NAPI-RS just requires the derive on the defining crate. See node-napi.md for the worked mirror-type pattern and the serialized-payload alternative.
 
-**This is the strongest practical argument for the narrow, coarse boundary below.** Every type that crosses into Node costs a mirror struct and two conversions. A chatty interface multiplies that cost; a command/result interface with a handful of types barely pays it.
+**This is still the strongest practical argument for the narrow, coarse boundary below.** Every type that crosses into Node costs a mirror struct and two conversions. A chatty interface multiplies that cost; a command/result interface with a handful of types barely pays it.
 
-> **Note on the other reference files:** `rust-core-uniffi.md` and `bootstrap.md` show `#[uniffi::export]` and `uniffi::setup_scaffolding!()` directly on the `core` crate. That is the simpler arrangement and it is fine for a UniFFI-only project, but once the NAPI adapter exists the split above is the correct layout. Treat those samples as showing the UniFFI mechanics rather than the final crate topology.
+### Optional: a binding-free core via feature gates
+
+**Not the default.** But if the transitive `uniffi` dependency in the Node build genuinely matters to you, feature-gate the derives on the core rather than mirroring them into an adapter:
+
+```rust
+#[cfg_attr(feature = "uniffi", derive(uniffi::Record))]
+pub struct DeviceRecord { /* … */ }
+```
+
+The trade is worth stating plainly: that is *N* one-line attributes that live next to the type they describe and therefore **cannot drift**, versus *N* duplicated declarations in a separate crate that **can**. So if someone wants a core with no binding attributes compiled in, feature gates are the way to get it — not a UniFFI adapter full of `#[uniffi::remote(...)]` mirrors.
 
 ## Prefer command/result over a callback port
 

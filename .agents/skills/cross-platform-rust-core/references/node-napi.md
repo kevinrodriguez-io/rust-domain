@@ -43,7 +43,7 @@ pub fn plan_notifications(devices: Vec<DeviceRecord>, events: Vec<DomainEvent>)
     -> napi::Result<Vec<SendCommand>> { ... }
 ```
 
-And you cannot fix it from the adapter either: `FromNapiValue` is a foreign trait and `DeviceRecord` is a foreign type, so Rust's orphan rule forbids the impl. The only way to make the core's own types work would be to put `#[napi(object)]` on them in the core crate — which drags `napi` into the crate that is also compiled for four Android ABIs and an XCFramework, and breaks the purity rule in core-purity-and-io.md.
+And you cannot fix it from the adapter either: `FromNapiValue` is a foreign trait and `DeviceRecord` is a foreign type, so Rust's orphan rule forbids the impl. The only way to make the core's own types work would be to put `#[napi(object)]` on them in the core crate — which pulls a Node-oriented binding crate into the crate that is also compiled for four Android ABIs and linked into an XCFramework, to serve one of three hosts. See core-purity-and-io.md for why the core deliberately carries UniFFI derives but not these.
 
 ### Mirror types in the adapter
 
@@ -97,7 +97,7 @@ Every core type on the Node boundary needs a mirror struct plus one or two `From
 2. **Add a round-trip test per mirrored type** (`core → mirror → core` equality). It is the only cheap defence against a forgotten field.
 3. **Pass a serialized payload instead** when the type count makes mirroring worse than the copy. One `String` (or `Buffer`) of JSON across the boundary, deserialized into core types on the Rust side, needs no mirrors at all. You pay serialization on every call and lose the generated TypeScript shape, so this is the right trade when there are many types crossing rarely, and the wrong one for a hot path with two types. napi-rs can convert `serde_json::Value` with the `serde-json` feature, but note the documented caveat that it "is not a lossless representation of arbitrary JavaScript."
 
-**Contrast with UniFFI, which does not have this problem.** UniFFI supports *remote types* — "types defined in other crates that do not use UniFFI" — precisely because of "Rust's orphan rule," and the fix is a mirrored **declaration** wrapped in `#[uniffi::remote(Record)]` / `#[uniffi::remote(Enum)]`, not a duplicated type with conversions ([remote and external types](https://github.com/mozilla/uniffi-rs/blob/v0.32.1/docs/manual/src/types/remote_ext_types.md)). NAPI-RS has no equivalent, so the Node side pays in conversion code where the Apple and Android sides do not.
+**Contrast with UniFFI, which pays nothing here.** The core carries UniFFI derives directly, so Apple and Android reach core types with no mirrors and no conversions at all. That asymmetry is a deliberate decision, not an oversight — see core-purity-and-io.md for the reasoning. UniFFI *additionally* supports *remote types* for crates that cannot carry its derives — "types defined in other crates that do not use UniFFI," needed "because of Rust's orphan rule," and solved with a mirrored **declaration** under `#[uniffi::remote(Record)]` rather than a duplicated type ([remote and external types](https://github.com/mozilla/uniffi-rs/blob/v0.32.1/docs/manual/src/types/remote_ext_types.md)) — but that mechanism is not needed under the default layout. NAPI-RS has neither option, which is why the Node side is the only one that mirrors.
 
 ## Type mapping
 
