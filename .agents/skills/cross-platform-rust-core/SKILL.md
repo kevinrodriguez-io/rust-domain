@@ -27,6 +27,7 @@ These are the ones that cause silent failure or expensive rework. Each links to 
 5. **Every push can be delivered twice.** BullMQ is at-least-once and a stalled job is retried by another worker. Make sends idempotent. See [references/queue-bullmq.md](references/queue-bullmq.md).
 6. **Hold one long-lived APNs HTTP/2 connection pool per process.** Apple may treat repeated connect/disconnect as a denial-of-service attack. Never build a client inside a job processor.
 7. **Use OSS BullMQ only.** No `@taskforcesh/bullmq-pro`, no `group` job option, no `job.getBatch()`.
+8. **Never create or hand-edit IDE project files.** `project.pbxproj`, `.xcodeproj`/`.xcworkspace` contents, `.xcscheme`, and Android Studio's `.idea/` are IDE-generated and agent edits corrupt them in ways that surface later as confusing build errors. **The human creates the Apple and Android targets in Xcode and Android Studio; you walk them through it and verify each step.** You own everything textual — the Cargo workspace, the bindgen, build scripts, `Package.swift`, `*.gradle.kts`, and the Node service. See [references/bootstrap.md](references/bootstrap.md).
 
 ## Scope
 
@@ -63,8 +64,8 @@ A correct project has these pieces. Details in the references.
 core/                     # Rust crate: cdylib + staticlib, domain logic only
   src/lib.rs              #   uniffi::setup_scaffolding!()
 uniffi-bindgen/           # [[bin]] pinned to the same uniffi version
-android/                  # Gradle project; consumes generated Kotlin + jniLibs
-apple/                    # Swift Package; consumes XCFramework + generated Swift
+android/                  # HUMAN-created in Android Studio; consumes generated Kotlin + jniLibs
+apple/                    # HUMAN-created in Xcode; consumes XCFramework + generated Swift
 node/                     # NAPI-RS addon + BullMQ service + APNs/FCM senders
 ```
 
