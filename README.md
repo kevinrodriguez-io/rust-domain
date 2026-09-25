@@ -1,4 +1,4 @@
-# cross-platform-rust-core skill
+# rust-domain
 
 An AI agent skill for putting an app's **domain entirely in Rust** — one source of truth, tested with `cargo test`, and shared with native hosts:
 
@@ -47,7 +47,7 @@ The canonical content lives in one directory. Everything else is a pointer or a 
 ```
 AGENTS.md                                  # always-on instructions (canonical)
 CLAUDE.md                                  # one-line "@AGENTS.md" import
-.agents/skills/cross-platform-rust-core/
+.agents/skills/rust-domain/
   SKILL.md                                 # entry point, spec-only frontmatter
   references/                              # per-surface detail, loaded on demand
     versions.md                            #   the pin table — read first
@@ -94,7 +94,7 @@ Edit `.agents/skills/` only — never through the `.claude/skills` pointer.
 Validate before committing:
 
 ```bash
-skills-ref validate .agents/skills/cross-platform-rust-core
+skills-ref validate .agents/skills/rust-domain
 ```
 
 ## Scope

@@ -1,8 +1,8 @@
 # Agent instructions
 
-This repository contains an **agent skill** for building cross-platform applications around a shared Rust core.
+This repository contains **rust-domain**, an agent skill for putting an app's domain entirely in Rust.
 
-The skill lives in `.agents/skills/cross-platform-rust-core/`. Its `SKILL.md` is the entry point; detailed per-surface material is in `references/`.
+The skill lives in `.agents/skills/rust-domain/`. Its `SKILL.md` is the entry point; detailed per-surface material is in `references/`.
 
 ## Working in this repo
 
@@ -18,7 +18,7 @@ The skill lives in `.agents/skills/cross-platform-rust-core/`. Its `SKILL.md` is
 Validate the skill before committing, if `skills-ref` is available:
 
 ```bash
-skills-ref validate .agents/skills/cross-platform-rust-core
+skills-ref validate .agents/skills/rust-domain
 ```
 
 Otherwise check by hand that frontmatter parses, `name` matches the directory, and no reference link points more than one level deep.

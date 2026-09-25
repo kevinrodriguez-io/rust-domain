@@ -1,14 +1,14 @@
 ---
-name: cross-platform-rust-core
+name: rust-domain
 description: Put an Android and iOS app's domain entirely in one Rust core — a single source of truth, tested with cargo test, and shared through UniFFI to Kotlin/Jetpack Compose and Swift/SwiftUI. Use when the goal is unified Rust testability and one implementation of the rules, or when working with UniFFI, uniffi-bindgen, cargo-ndk, or XCFramework builds. A Node service (NAPI-RS, BullMQ, APNs, FCM) is an optional later expansion.
 license: Apache-2.0
 compatibility: Requires Rust 1.90+ and cargo. Android and Apple builds use the Android Studio and Xcode the user already has; do not upgrade them. Apple linking needs macOS. The optional Node expansion needs Node 22+ and a Redis 6.2+ instance.
 metadata:
-  version: "1.1"
+  version: "1.2"
   verified-on: "2026-09-19"
 ---
 
-# Cross-platform Rust core: UniFFI for Android and iOS
+# Rust domain
 
 Build one Rust core and consume it from two hosts: Android (Kotlin/Compose) and Apple (Swift/SwiftUI). A Node service is an optional expansion, outside the starting shape. All version pins were verified against primary sources on **2026-09-19**.
 
