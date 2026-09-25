@@ -89,7 +89,7 @@ If the project copied UniFFI's own Gradle snippet, expect **both** problems at o
 Do not bump everything at once. This order keeps each failure attributable:
 
 1. **Rust toolchain** to ≥ 1.90.0. Nothing else works below it.
-2. **UniFFI** to `=0.32.1`, one minor at a time if coming from ≤ 0.30, applying each release's migrations. Regenerate bindings and rebuild both hosts after each step — checksum errors surface at runtime, not compile time.
+2. **UniFFI** to `=0.32.1`, one minor at a time if coming from ≤ 0.30, applying each release's migrations. Regenerate bindings and rebuild both hosts after each step. A stale call site fails that compile. A checksum mismatch does not: it is thrown when the library loads.
 3. **Android**: keep the AGP, Gradle, JDK, and Kotlin in the user's project. Apply the detection table for APIs that version removed. Do not bump those tools unless the user asks.
 4. **Apple**: keep the user's Xcode. If it is Xcode 27, a macOS 11 or watchOS 8 target will not build, and on-device debugging starts at iOS 17.
 5. **Node**, only if a service exists: Node → 24, then `firebase-admin` → 14, then BullMQ → 6 with `ioredis` added explicitly.

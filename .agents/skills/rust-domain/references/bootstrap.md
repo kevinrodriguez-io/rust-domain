@@ -300,4 +300,4 @@ Only if a Node service was requested:
 
 Get `health()` onto **both** mobile hosts **before** designing the real interface. The plumbing is where the version and toolchain problems live, and they are much cheaper to diagnose against a one-field record than against a real domain model. Add the Node service only after that, and only when asked.
 
-Once plumbing is proven, put the real domain in the core and test it there. Design the interface per core-purity-and-io.md: pure functions taking owned data and returning owned decisions, with the hosts performing IO. Do not leave a copy of those rules in Kotlin or Swift.
+Once plumbing is proven, put the real domain in the core and test it there. Design it per core-purity-and-io.md: pure functions, types, objects, and traits that compose, with the hosts performing IO. Do not leave a copy of those rules in Kotlin or Swift, and do not collapse them into one entry point.

@@ -39,13 +39,12 @@ Every exported argument must implement `FromNapiValue` and every returned value 
 That means you cannot write this:
 
 ```rust
-// ✗ Does not compile. DeviceRecord is a core type with no napi impls.
+// ✗ Does not compile. Money is a core type with no napi impls.
 #[napi]
-pub fn plan_notifications(devices: Vec<DeviceRecord>, events: Vec<DomainEvent>)
-    -> napi::Result<Vec<SendCommand>> { ... }
+pub fn add(left: Money, right: Money) -> napi::Result<Money> { ... }
 ```
 
-And you cannot fix it from the adapter either: `FromNapiValue` is a foreign trait and `DeviceRecord` is a foreign type, so Rust's orphan rule forbids the impl. The only way to make the core's own types work would be to put `#[napi(object)]` on them in the core crate — which pulls a Node-oriented binding crate into the crate that is also compiled for four Android ABIs and linked into an XCFramework, to serve an optional host. See core-purity-and-io.md for why the core deliberately carries UniFFI derives but not these.
+And you cannot fix it from the adapter either: `FromNapiValue` is a foreign trait and `Money` is a foreign type, so Rust's orphan rule forbids the impl. The only way to make the core's own types work would be to put `#[napi(object)]` on them in the core crate — which pulls a Node-oriented binding crate into the crate that is also compiled for four Android ABIs and linked into an XCFramework, to serve an optional host. See core-purity-and-io.md for why the core deliberately carries UniFFI derives but not these.
 
 ### Mirror types in the adapter
 
@@ -58,34 +57,22 @@ use yourapp_core as core;
 
 /// #[napi(object)] requires all fields to be public.
 #[napi(object)]
-pub struct DeviceRecord {
-    pub id: String,
-    pub platform: String,
-    pub fid: Option<String>,
+pub struct Money {
+    pub cents: i64,
+    pub currency: String,
 }
 
-impl From<DeviceRecord> for core::DeviceRecord {
-    fn from(v: DeviceRecord) -> Self { /* field-by-field */ }
+impl From<Money> for core::Money {
+    fn from(v: Money) -> Self { /* field-by-field */ }
 }
 
-#[napi(object)]
-pub struct SendCommand { /* … */ }
-
-impl From<core::SendCommand> for SendCommand {
-    fn from(v: core::SendCommand) -> Self { /* field-by-field */ }
+impl From<core::Money> for Money {
+    fn from(v: core::Money) -> Self { /* field-by-field */ }
 }
 
 #[napi]
-pub fn plan_notifications(
-    devices: Vec<DeviceRecord>,
-    events: Vec<DomainEvent>,
-) -> napi::Result<Vec<SendCommand>, CoreErrorCode> {
-    let commands = core::plan_notifications(
-        devices.into_iter().map(Into::into).collect(),
-        events.into_iter().map(Into::into).collect(),
-    )
-    .map_err(to_napi)?;
-    Ok(commands.into_iter().map(Into::into).collect())
+pub fn add(left: Money, right: Money) -> napi::Result<Money, CoreErrorCode> {
+    core::add(left.into(), right.into()).map(Into::into).map_err(to_napi)
 }
 ```
 
@@ -95,7 +82,7 @@ pub fn plan_notifications(
 
 Every core type on the Node boundary needs a mirror struct plus one or two `From` impls, and they drift silently: adding a field to the core type compiles fine until you notice the adapter never forwards it. Mitigations, in order:
 
-1. **Keep the boundary narrow.** This is the strongest argument for the command/result design in core-purity-and-io.md — few, coarse functions mean few mirrored types. A chatty API multiplies this cost directly.
+1. **Mirror the types that cross, and leave the Rust API factored.** A mirror per type is the Node tax. It is not a reason to merge the domain into a few oversized functions. Android and iOS have no mirror.
 2. **Add a round-trip test per mirrored type** (`core → mirror → core` equality). It is the only cheap defence against a forgotten field.
 3. **Pass a serialized payload instead** when the type count makes mirroring worse than the copy. One `String` (or `Buffer`) of JSON across the boundary, deserialized into core types on the Rust side, needs no mirrors at all. You pay serialization on every call and lose the generated TypeScript shape, so this is the right trade when there are many types crossing rarely, and the wrong one for a hot path with two types. napi-rs can convert `serde_json::Value` with the `serde-json` feature, but note the documented caveat that it "is not a lossless representation of arbitrary JavaScript."
 

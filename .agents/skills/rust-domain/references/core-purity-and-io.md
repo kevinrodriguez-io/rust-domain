@@ -32,7 +32,7 @@ The `bindings/napi/` crate does not exist until a Node service is requested. **T
 
 The underlying constraint is the same in both directions — Rust's orphan rule means an adapter crate cannot implement a foreign trait (`FromNapiValue`, or UniFFI's converters) for a foreign type. UniFFI names the orphan rule explicitly in [its remote-types docs](https://github.com/mozilla/uniffi-rs/blob/v0.32.1/docs/manual/src/types/remote_ext_types.md) and offers an escape from it; NAPI-RS just requires the derive on the defining crate. See node-napi.md for the worked mirror-type pattern and the serialized-payload alternative.
 
-**This is still the strongest practical argument for the narrow, coarse boundary below.** Every type that crosses into Node costs a mirror struct and two conversions. A chatty interface multiplies that cost; a command/result interface with a handful of types barely pays it.
+**Node mirroring is not a reason to flatten the domain.** Every type that crosses into Node costs a mirror struct and two conversions. Android and iOS pay nothing extra for another type or another function, so factor the core for reuse. If a Node adapter is added later, it mirrors the types that actually cross.
 
 ### Optional: a binding-free core via feature gates
 
@@ -45,30 +45,36 @@ pub struct DeviceRecord { /* … */ }
 
 The trade is worth stating plainly: that is *N* one-line attributes that live next to the type they describe and therefore **cannot drift**, versus *N* duplicated declarations in a separate crate that **can**. So if someone wants a core with no binding attributes compiled in, feature gates are the way to get it — not a UniFFI adapter full of `#[uniffi::remote(...)]` mirrors.
 
-## Prefer command/result over a callback port
+## Factor the domain; keep IO in the host
 
-There are two ways to express "the host owns IO". They are not equally good.
+The core is a Rust library. Give it that shape.
 
-### Preferred: command/result (pure core)
+- **Pure functions** for calculations and decisions, small enough to test and compose.
+- **Types** — records, enums, and objects — that carry the domain and expose behavior.
+- **Traits** where a protocol is the real abstraction. UniFFI exposes objects as classes, and traits as Swift protocols and Kotlin interfaces.
 
-Core functions take owned data and return owned decisions. The host reads, calls the core, and performs the writes.
+The host reads and writes. It calls these functions and methods with values it already has. One function that accepts the whole input and returns every decision cannot be reused and cannot be tested in pieces. Do not write it.
 
 ```rust
+#[derive(uniffi::Record)]
+pub struct Money { pub cents: i64, pub currency: String }
+
 #[uniffi::export]
-pub fn plan_notifications(
-    devices: Vec<DeviceRecord>,
-    events: Vec<DomainEvent>,
-) -> Result<Vec<SendCommand>, CoreError> { ... }
+pub fn add(left: Money, right: Money) -> Result<Money, CoreError> { ... }
+
+#[derive(uniffi::Object)]
+pub struct Ledger { /* entries */ }
+
+#[uniffi::export]
+impl Ledger {
+    pub fn balance(&self) -> Money { ... }
+    pub fn apply(&self, entry: Entry) -> Result<Arc<Ledger>, CoreError> { ... }
+}
 ```
 
-- **One FFI crossing per operation instead of N.**
-- No foreign trait, so no reference-cycle risk and no callback error-mapping surface.
-- Deterministic and testable without FFI.
-- Matches what the rule actually says: the core *manages* data, it does not fetch it.
+These are core types. Apple and Android reach them through UniFFI with no mirror. A later Node adapter pays one `#[napi(object)]` mirror per type that crosses, per the table above.
 
-Recursive enums (0.32.0) and methods on records/enums (0.31.0) make rich command and result types ergonomic, so this style does not force anaemic structs.
-
-The types in that signature are **core** types. Apple and Android reach them through UniFFI; the Node adapter needs a `#[napi(object)]` mirror plus `From` conversions for each one, per the table above. That is the per-type toll on the Node boundary, and it is why `plan_notifications` takes two vectors rather than exposing a dozen fine-grained calls.
+A trait the host calls is part of this API. A trait the core calls back into the host, to pull data, is the IO fallback below. Use it for that, not to structure the domain.
 
 ### Fallback: foreign trait port
 
@@ -98,7 +104,7 @@ From UniFFI's Kotlin docs: without an attached thread, "JNA has to attach and de
 Two mitigations, both mandatory rather than optional:
 
 1. Cache the `JavaVM` and attach permanently on your runtime's worker threads — see android-kotlin.md for the exact pattern.
-2. **Make the port coarse-grained.** Batch methods, never row-at-a-time. One call returning 500 records beats 500 calls, because per-call cost dominates per-byte cost.
+2. **Batch a foreign trait that pulls data.** Row-at-a-time callbacks into Kotlin pay the attach cost on every call. That constraint is about this IO port. It is not a reason to merge domain functions together.
 
 ### Errors panic by default
 
@@ -147,8 +153,8 @@ Both genuinely IO-shaped concerns — persistence and push delivery — stay in 
 ## Interface rules to enforce
 
 1. No database, ORM, migration, HTTP client, or filesystem crate in the core's dependency graph. This is lintable.
-2. Default to pure exported functions over owned domain types.
-3. Foreign traits only for unavoidable pull-shaped access, declared `#[uniffi::export(rust, foreign)]`, every method returning `Result<>`, with a mandatory `From<uniffi::UnexpectedUniFFICallbackError>` impl and coarse batch granularity.
+2. Export a factored Rust API: pure functions, objects, and traits. Do not add a single entry point that takes the whole input and returns the whole output.
+3. Foreign traits only for unavoidable pull-shaped IO, declared `#[uniffi::export(rust, foreign)]`, every method returning `Result<>`, with a mandatory `From<uniffi::UnexpectedUniFFICallbackError>` impl. Batch that pull.
 4. All foreign-trait parameters by value.
 5. The Android thread-attach pattern is mandatory wherever Rust threads call into Kotlin.
 6. Cancellation and query timeouts are host-side.

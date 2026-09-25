@@ -27,10 +27,10 @@ React Native and Expo share the **UI**. This shares the **logic** and deliberate
 This is not free, and the costs are the reason not to adopt it casually:
 
 - **It needs fluency in three stacks to start.** Rust for the core, Kotlin for Android, and Swift for Apple. A Node service is a fourth stack, and only if you expand. A team that cannot staff the three will struggle, and the FFI seam is precisely where thin expertise hurts most.
-- **The FFI seam is a real maintenance tax.** Every type crossing it costs generated bindings, and on the Node side a mirrored type plus conversions. Version mismatches between the bindings generator and the scaffolding surface as runtime checksum errors rather than compile errors.
+- **The FFI seam is a real maintenance tax.** Every type crossing it costs generated bindings, and on the Node side a mirrored type plus conversions. A changed export is a compile error: regenerate the bindings and the Swift or Kotlin call site fails to build. The checksum is the exception. It runs when the library loads, so a bindgen and scaffolding version skew can compile on both sides and throw `UniFFI API checksum mismatch` at startup.
 - **Native builds get more complicated.** An XCFramework and four Android ABIs have to be produced, pinned, and kept in step with the IDE projects.
 
-That tax is why the seam is **coarse and narrow by design** — few, chunky functions that take owned data and return owned decisions, rather than a fine-grained API. The skill enforces that shape, because a chatty boundary multiplies every one of these costs.
+That tax is the cost of generated bindings. It is not a reason to collapse the domain into a few oversized functions. Design the core as a Rust library: small pure functions, types that compose, and objects and traits where the abstraction is real. UniFFI exports those as functions, classes, and protocols. Hosts perform IO around them.
 
 ### Non-goals
 

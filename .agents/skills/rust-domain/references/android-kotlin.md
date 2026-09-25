@@ -103,7 +103,7 @@ class MainActivity : ComponentActivity() {
 
 The `export_name` must match `Java_<package_with_underscores>_<Class>_<method>`.
 
-This only matters for Rust→Kotlin calls, which is another reason to prefer the pure-core design in core-purity-and-io.md: with command/result there are far fewer of them.
+This cost applies when Rust calls back into Kotlin. Ordinary domain calls go the other way, from the host into Rust, so factor those normally. See core-purity-and-io.md.
 
 ## Compose
 

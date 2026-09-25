@@ -19,7 +19,7 @@ The domain lives **100% in Rust**. That is the point of paying the FFI cost, and
 - **Unified testability.** `cargo test` is the test suite for the domain. No simulator, no emulator, no device, no database. A bug fixed in Rust is fixed on both platforms.
 - **Proper sharing.** Android and iOS call the same functions through generated bindings. Sharing means that crate, not a Kotlin port and a Swift port of the same rules.
 - **Single source of truth.** A rule exists in one place. If a business rule appears in Kotlin or Swift, it has already drifted; move it into the core and cover it with a Rust test.
-- **The whole domain fits.** Calculations, state transitions, validation, and decisions belong in the core. Hosts render UI and perform IO. They pass owned data in and receive owned decisions back.
+- **The whole domain fits.** Calculations, state transitions, validation, and decisions belong in the core, factored as pure functions, types, objects, and traits that compose. Hosts render UI and perform IO. They call that library. They do not each reimplement it.
 
 Screens, navigation, persistence, and network stay on each host, so the shared slice of a whole app is however much of it is rules. Every rule that lives in the core exists once.
 
@@ -27,15 +27,15 @@ Screens, navigation, persistence, and network stay on each host, so the shared s
 
 ## Architecture in one paragraph
 
-A single Rust crate holds the domain. UniFFI generates first-party Kotlin and Swift bindings from it. **The core performs no IO** — no database, no filesystem, no network — so the domain stays plain Rust and `cargo test` stays sufficient. Each host owns its IO and passes owned data in and out. The same crate can later be wrapped for a Node service; that path is documented and stays out of bootstrap.
+A single Rust crate holds the domain, shaped like any other Rust library. UniFFI generates first-party Kotlin and Swift bindings from it, including objects as classes and traits as protocols. **The core performs no IO** — no database, no filesystem, no network — so the domain stays plain Rust and `cargo test` stays sufficient. Each host owns its IO and calls into the library with values it already has. The same crate can later be wrapped for a Node service; that path is documented and stays out of bootstrap.
 
 ## Non-negotiable rules
 
 These are the ones that cause silent failure or expensive rework. Each links to detail.
 
 1. **Pin library versions exactly.** Use [references/versions.md](references/versions.md) for UniFFI and the other libraries a mismatch breaks at runtime. Do not resolve "latest" for those. The user's Xcode and Android Studio are theirs — use what is installed, and do not upgrade it.
-2. **Pin `uniffi`, `uniffi_bindgen`, and the bindgen binary to the same exact version** and build the bindgen as a `[[bin]]` in your own workspace. UniFFI's runtime version guard does **not** catch a bindgen/scaffolding mismatch. See [references/rust-core-uniffi.md](references/rust-core-uniffi.md).
-3. **The core owns no persistence.** Prefer pure functions over callback traits. See [references/core-purity-and-io.md](references/core-purity-and-io.md).
+2. **Pin `uniffi`, `uniffi_bindgen`, and the bindgen binary to the same exact version** and build the bindgen as a `[[bin]]` in your own workspace. A changed export fails the host compile after regeneration. The checksum does not: the contract version is frozen, so a bindgen and scaffolding skew compiles on both sides and throws when the library loads. See [references/rust-core-uniffi.md](references/rust-core-uniffi.md).
+3. **The core owns no persistence.** Factor it as pure functions, types, objects, and traits. The host performs IO. Do not fetch data through a callback into the host, and do not collapse the domain into one entry point. See [references/core-purity-and-io.md](references/core-purity-and-io.md).
 4. **UniFFI has no cancellation.** Expose an explicit `cancel()` that sets a flag the core checks; map it to an error variant. Never promise Swift `CancellationError` or coroutine cancellation semantics.
 5. **Never create or hand-edit IDE project files.** `project.pbxproj`, `.xcodeproj`/`.xcworkspace` contents, `.xcscheme`, and Android Studio's `.idea/` are IDE-generated and agent edits corrupt them in ways that surface later as confusing build errors. **The human creates the Apple and Android targets in Xcode and Android Studio; you walk them through it and verify each step.** You own everything textual — the Cargo workspace, the bindgen, build scripts, `Package.swift`, and `*.gradle.kts`. See [references/bootstrap.md](references/bootstrap.md).
 
