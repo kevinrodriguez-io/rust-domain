@@ -4,7 +4,7 @@ description: Put an Android and iOS app's domain entirely in one Rust core — a
 license: Apache-2.0
 compatibility: Requires Rust 1.90+ and cargo. Android and Apple builds use the Android Studio and Xcode the user already has; do not upgrade them. Apple linking needs macOS. The optional Node expansion needs Node 22+ and a Redis 6.2+ instance.
 metadata:
-  version: "1.2"
+  version: "1.0.0"
   verified-on: "2026-09-19"
 ---
 
