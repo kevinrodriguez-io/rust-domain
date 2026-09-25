@@ -106,3 +106,15 @@ skills-ref validate .agents/skills/rust-domain
 **Expansion, used as a guide when asked:** NAPI-RS Node addon, BullMQ queue architecture, APNs and FCM delivery.
 
 **Deliberately out of scope:** WebAssembly and browser targets, Kotlin Multiplatform (and Gobley), third-party UniFFI generators, and BullMQ Pro. Each would pin the stack to older UniFFI versions or add a commercial dependency. Excluding them is what allows pinning UniFFI 0.32.1.
+
+## Copyright
+
+Copyright 2026 [Kevin Rodriguez](https://github.com/kevinrodriguez-io)
+
+Licensed under the Apache License, Version 2.0. See [LICENSE](LICENSE).
+
+## Attribution
+
+**rust-domain** is written by [Kevin Rodriguez](https://github.com/kevinrodriguez-io).
+
+Version pins were checked against the projects they name: [UniFFI](https://github.com/mozilla/uniffi-rs), the Rust crate index, the npm registry, Google's Android and Firebase docs, and Apple's Xcode requirements. Those projects remain under their own licenses. This skill does not relicense them.
