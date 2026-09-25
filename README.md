@@ -1,5 +1,7 @@
 # rust-domain
 
+![A rusted iron cube joined by a thread to a glass square and a stone disc](assets/rust-domain-banner.jpg)
+
 An AI agent skill for putting an app's **domain entirely in Rust** — one source of truth, tested with `cargo test`, and shared with native hosts:
 
 - **Android** — Kotlin / Jetpack Compose via UniFFI
