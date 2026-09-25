@@ -4,17 +4,17 @@ Verified 2026-09-19. Pins in versions.md.
 
 **Ownership:** the human creates the Xcode project and target and adds the package through Xcode; the agent owns `Package.swift`, the XCFramework build, and generated Swift, and never edits `project.pbxproj` — see [bootstrap.md](bootstrap.md).
 
-## Host requirement is strict
+## Host tooling
 
-**Xcode 27 requires macOS Tahoe 26.6 or later.** There is no workaround. A CI runner on an older macOS cannot build this leg, and Linux cannot build it at all.
+**Use the user's Xcode.** Do not install a newer one, and do not refuse to build because it is not the version this skill was verified on (Xcode 27, 2026-09-19). Read `xcodebuild -version` and stay inside what that Xcode accepts.
+
+If that Xcode is 27, it is Apple silicon only, requires macOS Tahoe 26.6+, rejects a macOS deployment target of 11 and watchOS 8, and will not debug a device or simulator below iOS 17. Those are limits of that Xcode. An older Xcode does not have them, and shipping to an older iOS still works on 27. Linux still cannot link Apple targets.
 
 One useful split: *generating* the Swift bindings works on any host, because `uniffi-bindgen-swift` only emits `.swift`, `.h`, and `.modulemap` files. Only compiling the Rust staticlibs for Apple targets and assembling the XCFramework require macOS with Xcode. So the Swift API surface can be developed and reviewed on Linux; the link step cannot.
 
-Other Xcode 27 changes that break older project settings:
+Set the Swift package's platform versions to the deployment target of the app the user created. The sample below uses iOS 15 and macOS 12 only as a placeholder.
 
-- macOS deployment target floor rose **11 → 12**; watchOS **8 → 9**. A project declaring `macOS 11` will not build.
-- **On-device debugging now requires iOS 17+** (up from 15) and watchOS 10+. You can still *ship* to iOS 15, but older test hardware cannot be debugged.
-- Swift 6 language mode remains opt-in — modes 6, 5, 4.2, and 4 are all available, so strict concurrency is a choice.
+Swift 6 language mode remains opt-in — modes 6, 5, 4.2, and 4 are available where the installed Xcode has them, so strict concurrency is a choice.
 
 ## Use `uniffi-bindgen-swift`, not `-l swift`
 

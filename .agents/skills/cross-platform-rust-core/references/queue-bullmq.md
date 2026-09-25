@@ -1,5 +1,7 @@
 # Queue: BullMQ v6 on Redis, OSS only
 
+Expansion guide. The starting scope is Android and iOS. Apply this only when adding a server.
+
 Verified 2026-09-19. Pins in versions.md. **Use OSS BullMQ. No Pro licence.**
 
 ## Redis requirements

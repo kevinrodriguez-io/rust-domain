@@ -11,7 +11,7 @@ Why this is a hard rule and not a preference: `project.pbxproj` and Android Stud
 | Owner | Responsibility |
 |---|---|
 | **Human (in the IDE)** | Creating the Xcode project and app target; creating the Android Studio project and app module; adding the package/framework dependency through the IDE UI; signing and capabilities; running on device |
-| **Agent (everything textual)** | Cargo workspace and `core` crate; the in-workspace `uniffi-bindgen` binary; build scripts; `Package.swift`; `build.gradle.kts` / `settings.gradle.kts` edits it can verify with `./gradlew`; the Node service; all generated-bindings plumbing |
+| **Agent (everything textual)** | Cargo workspace and `core` crate; the in-workspace `uniffi-bindgen` binary; build scripts; `Package.swift`; `build.gradle.kts` / `settings.gradle.kts` edits it can verify with `./gradlew`; all generated-bindings plumbing. A Node service, only when that expansion is requested |
 
 ### Prohibitions
 
@@ -51,24 +51,21 @@ rustup target add aarch64-linux-android armv7-linux-androideabi \
 rustup target add aarch64-apple-ios aarch64-apple-ios-sim x86_64-apple-ios
 ```
 
-`cargo binstall cargo-ndk` for Android. Apple needs Xcode 27 on macOS Tahoe 26.6+ — there is no Linux path.
+`cargo binstall cargo-ndk` for Android. Apple linking needs the user's Xcode on macOS — there is no Linux path for that step. Do not upgrade Xcode.
 
-Installing Xcode and Android Studio is the human's job; the agent only checks they are present.
+Installing Xcode and Android Studio is the human's job. The agent uses whatever is already installed and does not change it.
 
 ## 2. Workspace skeleton — agent
 
 ```
-Cargo.toml              # [workspace] members = ["core", "uniffi-bindgen", "node/addon"]
+Cargo.toml              # [workspace] members = ["core", "uniffi-bindgen"]
 core/                   # agent  — domain logic, cdylib + staticlib
 uniffi-bindgen/         # agent  — [[bin]] uniffi-bindgen + [[bin]] uniffi-bindgen-swift
 android/                # HUMAN  — Android Studio project; agent edits only *.gradle.kts
 apple/                  # HUMAN  — Xcode project; agent edits only Package.swift
-node/
-  addon/                # agent  — NAPI-RS crate
-  src/                  # agent  — service: queue, push, db
 ```
 
-Create only the agent-owned directories now. Leave `android/` and `apple/` empty — the human fills them in steps 5 and 6.
+Create only the agent-owned directories now. Leave `android/` and `apple/` empty — the human fills them in steps 5 and 6. Do not create `node/`. That directory is the expansion in section 7.
 
 One lockfile at the root is the point — it is what makes the bindgen and the core share a UniFFI version structurally rather than by convention.
 
@@ -88,7 +85,7 @@ pub fn health() -> Health {
 }
 ```
 
-**Keep IO out from the very first commit.** It is far easier to hold the line than to remove a database dependency later. See core-purity-and-io.md.
+**Keep IO out from the very first commit.** The domain has to stay plain Rust so `cargo test` can cover it without a device or a database. It is far easier to hold that line than to remove a database dependency later. See core-purity-and-io.md.
 
 ## 4. Bindgen binary — agent
 
@@ -173,7 +170,7 @@ unzip -l app/build/outputs/apk/debug/app-debug.apk | grep 'lib/arm64-v8a/libyour
 
 ## 6. Apple — interactive
 
-Reference: apple-swift.md. macOS with Xcode 27 only.
+Reference: apple-swift.md. macOS with the user's Xcode.
 
 ### 6a — agent: build the XCFramework
 
@@ -203,7 +200,7 @@ cd apple && swift build 2>&1 | tail -5
 
 ### 6c ▸ HUMAN — create the app target
 
-> In Xcode: **File → New → Project → App**, save it into `apple/` in this repo. Set the bundle identifier to match what you will use for APNs. Tell me when the project is created.
+> In Xcode: **File → New → Project → App**, save it into `apple/` in this repo. Set the bundle identifier. If you later add push, this is the identifier APNs will use. Tell me when the project is created.
 
 **Then stop and wait.**
 
@@ -247,9 +244,9 @@ nm "$(xcodebuild -project apple/YourApp.xcodeproj -scheme YourApp \
 
 **✓ GATE:** rebuild as in 6d. *Expected:* `BUILD SUCCEEDED` — which now also proves the generated Swift module imports.
 
-## 7. Node service — agent
+## 7. Expansion — Node service
 
-Per node-napi.md and queue-bullmq.md. Fully agent-owned; no IDE involved.
+Not part of the starting scope. Do this only when asked to add a server. The references remain the guide: node-napi.md, queue-bullmq.md, and push-apns-fcm.md. Fully agent-owned; no IDE involved. Add `node/addon` to the workspace members when you start.
 
 1. `npx @napi-rs/cli new node/addon`, wrap `health()`, confirm it loads from Node.
 2. Start Redis (6.2+) and set `maxmemory-policy=noeviction`.
@@ -268,9 +265,9 @@ redis-cli config get maxmemory-policy
 
 *Expected:* the health record prints, and the policy is `noeviction`.
 
-## 8. Credentials — human
+## 8. Expansion — credentials
 
-Needed only for real delivery, not for building:
+Skip this until section 7 is in scope. Needed only for real delivery, not for building:
 
 - **Apple:** `.p8` key file, Key ID, Team ID, bundle ID.
 - **Firebase:** service account JSON, project ID, and the same `.p8` uploaded to Firebase (at least one of dev/prod).
@@ -292,12 +289,15 @@ Do not call the bootstrap done until all of these pass. Agent-run unless marked.
 - [ ] Android *(human)*: the app shows `health()` on a **physical device**
 - [ ] Apple: `BUILD SUCCEEDED` for the simulator destination, and `nm | grep uniffi_` is non-zero
 - [ ] Apple *(human)*: the app shows `health()`
+- [ ] No `with_foreign`, `--library`, `--lib-file`, or `UniffiCustomTypeConverter` anywhere
+
+Only if a Node service was requested:
+
 - [ ] A BullMQ job round-trips against Redis with `noeviction` set
 - [ ] A mock push send completes through the queue path
-- [ ] No `with_foreign`, `--library`, `--lib-file`, or `UniffiCustomTypeConverter` anywhere
 
 ## Sequencing advice
 
-Get `health()` to all three hosts **before** designing the real interface. The plumbing is where the version and toolchain problems live, and they are much cheaper to diagnose against a one-field record than against a real domain model.
+Get `health()` onto **both** mobile hosts **before** designing the real interface. The plumbing is where the version and toolchain problems live, and they are much cheaper to diagnose against a one-field record than against a real domain model. Add the Node service only after that, and only when asked.
 
-Once plumbing is proven, design the interface per core-purity-and-io.md: pure functions taking owned data and returning owned decisions, with the hosts performing IO.
+Once plumbing is proven, put the real domain in the core and test it there. Design the interface per core-purity-and-io.md: pure functions taking owned data and returning owned decisions, with the hosts performing IO. Do not leave a copy of those rules in Kotlin or Swift.

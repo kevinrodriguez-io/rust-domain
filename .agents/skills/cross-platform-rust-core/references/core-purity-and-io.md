@@ -1,11 +1,11 @@
 # Core purity: where IO lives
 
-Verified 2026-09-19. The architectural rule: **data is not part of the core, only the logic that manages it.** A database is IO, and IO belongs to the host.
+Verified 2026-09-19. The architectural rule: **the domain lives entirely in the core, and data does not.** Logic — rules, transitions, validation, decisions — is Rust, tested with `cargo test`, and is the single source of truth for both hosts. A database is IO, and IO belongs to the host.
 
 ## What this removes
 
 - No SQLite or other C database in the Rust build — so no C dependency to get through `cargo-ndk` for four Android ABIs and then into an XCFramework.
-- No migrations in Rust. Schema evolution stays with the host, which already has tooling (Room, SwiftData/Core Data versioning, whatever the Node service uses).
+- No migrations in Rust. Schema evolution stays with the host, which already has tooling (Room, SwiftData/Core Data versioning, or the Node service if you add one later).
 - No cross-platform file path, sandbox, or encryption-at-rest abstraction in the core.
 - Core tests need no device, no database, and no FFI — plain `cargo test`.
 
@@ -13,16 +13,16 @@ Verified 2026-09-19. The architectural rule: **data is not part of the core, onl
 
 ```
 core/                 # domain logic + UniFFI derives. No napi. No IO.
-bindings/napi/        # NAPI-RS adapter — mirror types + From conversions
+bindings/napi/        # optional expansion — NAPI-RS adapter, mirror types + From conversions
 ```
 
-**This asymmetry is deliberate. Do not "fix" it by making the core binding-free.** Three reasons:
+The `bindings/napi/` crate does not exist until a Node service is requested. **The asymmetry is deliberate. Do not "fix" it by making the core binding-free.** Three reasons:
 
 1. **UniFFI derives are inert.** They expand to trait impls and metadata — no IO, no runtime behaviour, nothing that executes unless a binding calls in. So `uniffi` in the core's dependency graph does **not** violate rule 3, and the sanity-check grep is deliberately a list of **IO** crates (`sqlx`, `rusqlite`, `reqwest`, …), not binding crates. A binding crate is not an IO crate.
-2. **Two of the three hosts consume UniFFI.** Apple and Android both go through it. Moving its derives into an adapter would make the *majority* path pay a mirrored declaration per domain type purely to look symmetric with the *minority* path — which **maximizes** total duplication instead of minimizing it.
+2. **Both mobile hosts consume UniFFI.** Moving its derives into an adapter would make that path pay a mirrored declaration per domain type purely to look symmetric with an optional Node adapter — which **maximizes** total duplication instead of minimizing it.
 3. **The tools are genuinely asymmetric, so the layout should be too.** UniFFI is first-party for both mobile hosts *and* has remote types for the case where a crate cannot carry its derives. NAPI-RS is neither. Mirroring for the one host that requires it is the minimum, not a compromise.
 
-`napi` stays out of the core for the mirror-image reason: it serves exactly one of the three hosts, so putting its derives on core would pull a Node-oriented binding crate into the artifacts built for four Android ABIs and an XCFramework, and would buy nothing the single adapter crate does not already give you.
+`napi` stays out of the core: putting its derives on core would pull a Node-oriented binding crate into the artifacts built for four Android ABIs and an XCFramework, and would buy nothing the single adapter crate does not already give you.
 
 | Host | Reaches core types via | Mirror cost |
 |---|---|---|
@@ -123,6 +123,8 @@ A host repository holding a Rust object that holds the repository trait is a ref
 A slow query cannot be aborted from the core. Enforce timeouts inside the host's trait implementation.
 
 ## The Node service: invert, don't call back
+
+Expansion. Skip this section on a mobile-only project.
 
 NAPI-RS makes it easy to hand a JS function to Rust as a `ThreadsafeFunction`. Avoid it for persistence. Let Node do the database work and pass owned data into Rust.
 

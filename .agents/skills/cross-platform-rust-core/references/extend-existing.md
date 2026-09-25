@@ -28,7 +28,7 @@ Run through this before editing anything. Each row names the predecessor you are
 | AGP major version | 8.x | AGP 9 migration: remove `org.jetbrains.kotlin.android`, `kotlinOptions` → `compilerOptions`, kapt → KSP or `com.android.legacy-kapt`, set `targetSdk` explicitly |
 | `grep -rn 'androidx.compose.compiler:compiler'` | any hit | Frozen at 1.5.15 since 2024-08-07 → `org.jetbrains.kotlin.plugin.compose` |
 | `grep -rn 'android.libraryVariants'` | any hit | Removed by AGP 9's Variant API → `androidComponents` |
-| `ndkVersion` in Gradle | unset | Pin explicitly to the AGP default (`28.2.13676358`) and match `ANDROID_NDK_HOME` |
+| `ndkVersion` in Gradle | unset | Set it to the NDK the project's AGP already expects, and match `ANDROID_NDK_HOME`. Do not pick a newer NDK |
 | `targetSdk` | < 36 | Play has required 36 since 2026-08-31 |
 | JNA dependency | missing `@aar`, or < 5.12.0 | Use `net.java.dev.jna:jna:5.19.1@aar` |
 | Rust→Kotlin calls exist | no `attach_current_thread_permanently` | Add the thread-attach pattern; JNA otherwise attaches per call |
@@ -39,14 +39,14 @@ If the project copied UniFFI's own Gradle snippet, expect **both** problems at o
 
 | Check | Finding | Action |
 |---|---|---|
-| macOS version on build machines and CI | < Tahoe 26.6 | Cannot run Xcode 27. Upgrade runners before anything else |
-| macOS deployment target | 11 | Floor is 12 in Xcode 27 |
-| watchOS deployment target | 8 | Floor is 9 |
-| CI test devices | iOS < 17 | Xcode 27 cannot debug on-device below iOS 17 |
+| Xcode on build machines and CI | any installed version | Use it. Do not upgrade Xcode to match this skill |
+| macOS deployment target | 11, and the installed Xcode is 27 | That Xcode rejects 11. Raise to 12 only because the user's Xcode requires it |
+| watchOS deployment target | 8, and the installed Xcode is 27 | That Xcode rejects 8. Raise to 9 only because the user's Xcode requires it |
+| CI test devices | iOS < 17, and the installed Xcode is 27 | That Xcode cannot debug them. Leave the deployment target where the user set it |
 | Bindings generation | `uniffi-bindgen -l swift` | Switch to `uniffi-bindgen-swift` for XCFramework modulemap control |
 | `cargo install cargo-xcframework` in scripts | any hit | **No such crate.** The subcommand comes from the crate named `xcframework` |
 
-### Node service
+### Node service (skip unless one exists)
 
 | Check | Finding | Action |
 |---|---|---|
@@ -90,9 +90,9 @@ Do not bump everything at once. This order keeps each failure attributable:
 
 1. **Rust toolchain** to ≥ 1.90.0. Nothing else works below it.
 2. **UniFFI** to `=0.32.1`, one minor at a time if coming from ≤ 0.30, applying each release's migrations. Regenerate bindings and rebuild both hosts after each step — checksum errors surface at runtime, not compile time.
-3. **Android**: AGP → 9.4.1 with Gradle 9.7.1 and JDK 17+, then Kotlin 2.4.20, then Compose BOM. The built-in-Kotlin change is the disruptive one.
-4. **Apple**: upgrade runners to macOS Tahoe 26.6+, then Xcode 27, then raise deployment target floors.
-5. **Node**: Node → 24, then `firebase-admin` → 14, then BullMQ → 6 with `ioredis` added explicitly.
+3. **Android**: keep the AGP, Gradle, JDK, and Kotlin in the user's project. Apply the detection table for APIs that version removed. Do not bump those tools unless the user asks.
+4. **Apple**: keep the user's Xcode. If it is Xcode 27, a macOS 11 or watchOS 8 target will not build, and on-device debugging starts at iOS 17.
+5. **Node**, only if a service exists: Node → 24, then `firebase-admin` → 14, then BullMQ → 6 with `ioredis` added explicitly.
 
 After each step, re-run the verification gates in bootstrap.md.
 

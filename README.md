@@ -1,31 +1,32 @@
 # cross-platform-rust-core skill
 
-An AI agent skill for bootstrapping or extending applications built on a **shared Rust core** exposed to native hosts:
+An AI agent skill for putting an app's **domain entirely in Rust** — one source of truth, tested with `cargo test`, and shared with native hosts:
 
 - **Android** — Kotlin / Jetpack Compose via UniFFI
 - **Apple** — Swift / SwiftUI via UniFFI
-- **Node service** — NAPI-RS addon, BullMQ on Redis, APNs + FCM delivery
+
+A Node service (NAPI-RS, BullMQ on Redis, APNs + FCM) is an optional expansion. The references for it stay in the skill and are used only when a server is added.
 
 All version pins were verified against primary sources on **2026-09-19**.
 
 ## Why this architecture
 
-Four things it buys you:
+The domain lives 100% in Rust. That is the goal. The hosts render and do IO.
 
-- **Reusability** — the domain logic exists once. Not three implementations of the same rules in Kotlin, Swift, and TypeScript, quietly drifting until a bug reproduces on exactly one platform.
-- **Testability** — the core is plain Rust. It tests with `cargo test`, with no simulator, no emulator, no device farm, and no database.
-- **Standardization** — one set of pinned versions and one set of architectural rules across Apple, Android, and the server, instead of three ecosystems each making their own decisions.
-- **Native UI freedom** — every platform keeps its own idiomatic UI. SwiftUI stays SwiftUI and Compose stays Compose; neither is bent to fit a shared abstraction.
+- **Unified testability** — `cargo test` is the suite for the domain. No simulator, no emulator, no device farm, and no database. A fix in Rust is a fix on both platforms.
+- **Proper sharing** — Android and iOS call the same functions. A later Node service calls that same core rather than growing another copy.
+- **Single source of truth** — a rule exists in one place. A Kotlin or Swift copy of it has already drifted.
+- **Native UI stays native** — SwiftUI stays SwiftUI and Compose stays Compose, which is what keeps the domain free of UI and IO so the tests stay plain Rust.
 
 ### Why not React Native or Expo
 
-React Native and Expo share the **UI**. This shares the **logic** and deliberately does not share the UI. If your hard problem is shipping the same screens to both platforms quickly, React Native or Expo is the better tool and you should use it. If your hard problem is that the same non-trivial rules — sync, scheduling, pricing, crypto, offline reconciliation — have to behave *identically* on iOS, Android, and a server, then sharing the UI solves the wrong half and still leaves you writing that logic in JavaScript for a server that may not want it.
+React Native and Expo share the **UI**. This shares the **logic** and deliberately does not share the UI. If your hard problem is shipping the same screens to both platforms quickly, React Native or Expo is the better tool and you should use it. If your hard problem is that the same non-trivial rules — sync, scheduling, pricing, crypto, offline reconciliation — have to behave *identically* on iOS and Android, then sharing the UI solves the wrong half. The same core can later serve a Node process, so those rules do not have to be rewritten in JavaScript either.
 
 ### What it costs
 
 This is not free, and the costs are the reason not to adopt it casually:
 
-- **It needs fluency in four stacks.** Rust for the core, Kotlin for Android, Swift for Apple, and Node for the service. A team that cannot staff all four will struggle, and the FFI seam is precisely where thin expertise hurts most.
+- **It needs fluency in three stacks to start.** Rust for the core, Kotlin for Android, and Swift for Apple. A Node service is a fourth stack, and only if you expand. A team that cannot staff the three will struggle, and the FFI seam is precisely where thin expertise hurts most.
 - **The FFI seam is a real maintenance tax.** Every type crossing it costs generated bindings, and on the Node side a mirrored type plus conversions. Version mismatches between the bindings generator and the scaffolding surface as runtime checksum errors rather than compile errors.
 - **Native builds get more complicated.** An XCFramework and four Android ABIs have to be produced, pinned, and kept in step with the IDE projects.
 
@@ -54,9 +55,9 @@ CLAUDE.md                                  # one-line "@AGENTS.md" import
     core-purity-and-io.md
     android-kotlin.md
     apple-swift.md
-    node-napi.md
-    queue-bullmq.md
-    push-apns-fcm.md
+    node-napi.md                           # expansion
+    queue-bullmq.md                        # expansion
+    push-apns-fcm.md                       # expansion
     bootstrap.md
     extend-existing.md
 .claude/skills -> ../.agents/skills        # pointer for Claude Code and Grok
@@ -98,6 +99,8 @@ skills-ref validate .agents/skills/cross-platform-rust-core
 
 ## Scope
 
-**In scope:** Rust core, UniFFI Kotlin + Swift bindings, Android and Apple integration, NAPI-RS Node addon, BullMQ queue architecture, APNs and FCM delivery.
+**Starting scope:** Rust core, UniFFI Kotlin + Swift bindings, Android and Apple integration.
+
+**Expansion, used as a guide when asked:** NAPI-RS Node addon, BullMQ queue architecture, APNs and FCM delivery.
 
 **Deliberately out of scope:** WebAssembly and browser targets, Kotlin Multiplatform (and Gobley), third-party UniFFI generators, and BullMQ Pro. Each would pin the stack to older UniFFI versions or add a commercial dependency. Excluding them is what allows pinning UniFFI 0.32.1.

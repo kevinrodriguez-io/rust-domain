@@ -2,7 +2,7 @@
 
 Verified 2026-09-19 against UniFFI 0.32.1. Pins in versions.md.
 
-**Crate layout:** UniFFI attributes belong on the `core` crate, exactly as the samples below show, and that stays true once the NAPI adapter exists. The derives are inert, and two of the three hosts consume UniFFI, so relocating them into an adapter would add duplication rather than remove it. **Only the Node adapter mirrors types** — see core-purity-and-io.md for the full reasoning and the optional feature-gate route.
+**Crate layout:** UniFFI attributes belong on the `core` crate, exactly as the samples below show, and that stays true if a NAPI adapter is added later. The derives are inert, and both mobile hosts consume UniFFI, so relocating them into an adapter would add duplication rather than remove it. **Only the optional Node adapter mirrors types** — see core-purity-and-io.md for the full reasoning and the optional feature-gate route.
 
 ## Crate setup
 

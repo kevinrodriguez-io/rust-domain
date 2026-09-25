@@ -1,5 +1,7 @@
 # Push delivery: APNs and FCM
 
+Expansion guide. The starting scope is Android and iOS. Apply this only when adding a server.
+
 Verified 2026-09-19 against Apple and Google primary documentation. Library pins in versions.md.
 
 ## Libraries

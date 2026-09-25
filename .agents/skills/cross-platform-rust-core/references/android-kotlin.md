@@ -35,7 +35,7 @@ cargo ndk -t arm64-v8a -t armeabi-v7a -t x86_64 -t x86 \
   -o android/src/main/jniLibs build --release
 ```
 
-**Pin the NDK explicitly.** `cargo-ndk` "will find the most recent NDK version and use it" unless told otherwise, and AGP 9.4 defaults to `28.2.13676358` (r28c). Left alone, cargo-ndk picks the newest installed NDK (r30) while Gradle expects r28c — a silent mismatch between the two halves of your build. Set `ANDROID_NDK_HOME` to the pinned version, and set `ndkVersion` in Gradle to match.
+**Match the NDK to the user's project.** `cargo-ndk` "will find the most recent NDK version and use it" unless told otherwise. Left alone, it can pick a newer NDK than the Android Gradle Plugin in the project the user created. Set `ndkVersion` and `ANDROID_NDK_HOME` to the NDK that AGP already expects. Do not upgrade Android Studio or AGP to chase the version in versions.md.
 
 ## Gradle wiring
 

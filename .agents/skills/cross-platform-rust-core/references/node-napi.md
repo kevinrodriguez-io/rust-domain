@@ -1,5 +1,7 @@
 # Node service: NAPI-RS
 
+Expansion guide. The starting scope is Android and iOS. Apply this only when adding a server.
+
 Verified 2026-09-19. Pins in versions.md.
 
 ## Why NAPI-RS and not UniFFI here
@@ -43,7 +45,7 @@ pub fn plan_notifications(devices: Vec<DeviceRecord>, events: Vec<DomainEvent>)
     -> napi::Result<Vec<SendCommand>> { ... }
 ```
 
-And you cannot fix it from the adapter either: `FromNapiValue` is a foreign trait and `DeviceRecord` is a foreign type, so Rust's orphan rule forbids the impl. The only way to make the core's own types work would be to put `#[napi(object)]` on them in the core crate — which pulls a Node-oriented binding crate into the crate that is also compiled for four Android ABIs and linked into an XCFramework, to serve one of three hosts. See core-purity-and-io.md for why the core deliberately carries UniFFI derives but not these.
+And you cannot fix it from the adapter either: `FromNapiValue` is a foreign trait and `DeviceRecord` is a foreign type, so Rust's orphan rule forbids the impl. The only way to make the core's own types work would be to put `#[napi(object)]` on them in the core crate — which pulls a Node-oriented binding crate into the crate that is also compiled for four Android ABIs and linked into an XCFramework, to serve an optional host. See core-purity-and-io.md for why the core deliberately carries UniFFI derives but not these.
 
 ### Mirror types in the adapter
 

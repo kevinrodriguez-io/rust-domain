@@ -1,6 +1,8 @@
 # Pinned versions
 
-All versions verified against primary sources on **2026-09-19**. Pin exactly. Several components in this stack ship patch releases weekly.
+All versions verified against primary sources on **2026-09-19**. Pin the libraries below exactly. Several of them ship patch releases weekly.
+
+**Host tooling is the user's.** Xcode, Android Studio, and the SDK, NDK, AGP, Gradle, and Kotlin those IDEs already selected are not upgraded to match this file. Use the table when you are adding a dependency the IDE did not choose. When the IDE already chose a version, keep it, and apply only the constraints that version imposes.
 
 ## Rust core and UniFFI
 
@@ -15,6 +17,8 @@ All versions verified against primary sources on **2026-09-19**. Pin exactly. Se
 `0.32.1` is the minimum for Android: `0.32.0` had a checksum failure on aarch64, and `0.31.2` fixed JNA signedness bugs on ARM32. Do not go below `0.32.1`.
 
 ## Android
+
+These rows are what a new project was verified against. A project the user already created in Android Studio keeps the AGP, Gradle, Kotlin, JDK, and SDK that wizard wrote.
 
 | Component | Pin | Notes |
 |---|---|---|
@@ -38,16 +42,16 @@ All versions verified against primary sources on **2026-09-19**. Pin exactly. Se
 
 | Component | Pin | Notes |
 |---|---|---|
-| Xcode | `27` | **Requires macOS Tahoe 26.6+.** Ships Swift 6.4 and the iOS 27 SDK |
-| Swift | `6.4.0` | Released 2026-09-15 |
-| iOS deployment target | `15` minimum supported by Xcode 27 | Choose based on product needs |
-| macOS deployment target | `12` minimum | Floor rose from 11 in Xcode 27 |
-| watchOS deployment target | `9` minimum | Floor rose from 8 |
-| `cargo-swift` (optional) | `0.11.1` | Only if you want a turnkey Swift Package |
+| Xcode | the user's | Verified on 27 (2026-09-19). Do not install or upgrade Xcode to match this skill |
+| Swift | ships with that Xcode | Generated bindings do not require a particular Swift. Swift 6 language mode stays opt-in |
+| iOS / macOS / watchOS deployment targets | the user's app | Match the target the user created. On Xcode 27 the floors are macOS 12 and watchOS 9, and on-device debugging starts at iOS 17. Older Xcodes accept lower |
+| `cargo-swift` (optional) | `0.11.1` | Only if the user wants a turnkey Swift Package |
 
-**On-device debugging requires iOS 17+** with Xcode 27, up from iOS 15. You can still ship to iOS 15, but older test devices cannot be debugged.
+Xcode 27 is Apple silicon only and requires macOS Tahoe 26.6+. Those limits apply only when that is the Xcode the user is running.
 
-## Node service
+## Node service (expansion)
+
+Ignore this table until a Node service is in scope. The starting project is Android and iOS only.
 
 | Component | Pin | Notes |
 |---|---|---|
