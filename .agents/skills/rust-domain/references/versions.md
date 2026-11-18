@@ -1,6 +1,6 @@
 # Pinned versions
 
-All versions verified against primary sources on **2026-09-19**. Pin the libraries below exactly. Several of them ship patch releases weekly.
+All versions verified against primary sources on **2026-09-19**, except the Node row, rechecked **2026-11-17**. Pin the libraries below exactly. Several of them ship patch releases weekly.
 
 **Host tooling is the user's.** Xcode, Android Studio, and the SDK, NDK, AGP, Gradle, and Kotlin those IDEs already selected are not upgraded to match this file. Use the table when you are adding a dependency the IDE did not choose. When the IDE already chose a version, keep it, and apply only the constraints that version imposes.
 
@@ -55,7 +55,7 @@ Ignore this table until a Node service is in scope. The starting project is Andr
 
 | Component | Pin | Notes |
 |---|---|---|
-| Node | `24.x` (Active LTS) | Latest 24.21.0. **Node 20 is EOL; 22 is Maintenance LTS only** |
+| Node | `26.x` (Active LTS) | Latest 26.13.1 (security release 2026-11-11). Active LTS through 2027-10-20, security support through 2029-04-30. Do not use Node 20 or 22. GitHub Actions' JavaScript runtime is Node 24, because GitHub does not ship Node 26 for actions |
 | `napi` (Rust crate) | `3.12.6` | MSRV 1.88 |
 | `napi-derive` | `3.6.7` | |
 | `napi-build` | `2.4.3` | |
@@ -63,8 +63,8 @@ Ignore this table until a Node service is in scope. The starting project is Andr
 | `bullmq` | `6.3.8` | v6 line. See queue-bullmq.md for v5→v6 breaking changes |
 | `ioredis` | `6.0.0` | **Install explicitly** — optional peer dependency in BullMQ v6 |
 | Redis server | `6.2.0` minimum | Must set `maxmemory-policy=noeviction` |
-| `@parse/node-apn` | `8.1.0` | APNs client. Supports Node 20/22/24 |
-| `firebase-admin` | `14.4.0` | FCM client. **Requires Node ≥ 22** — this is what sets the Node floor |
+| `@parse/node-apn` | `8.2.0` | APNs client. Runs on Node 26. 8.1.0 does not |
+| `firebase-admin` | `14.4.0` | FCM client. Runs on Node 26. Its published minimum is not our pin |
 
 **Never use the bare `node-apn` package.** It is abandoned at 3.0.0 from November 2020 and still declares Node 4.6 support. The maintained fork is `@parse/node-apn`.
 
