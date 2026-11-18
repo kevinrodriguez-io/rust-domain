@@ -16,7 +16,7 @@ npx @napi-rs/cli new node/addon
 
 It prompts for the package name, the minimum Node-API level, target triples, license, TypeScript declarations, and whether to keep the GitHub Actions workflow.
 
-Requirements: Node `^20.17.0 || ^22.13.0 || >=23.5.0` for the CLI itself, and Rust 1.88+. Note the separate constraint that `firebase-admin` 14 requires Node ≥ 22, so the service floor is higher than the CLI's — pin Node 24 (Active LTS).
+Requirements: Node 26 and Rust 1.88+. Pin Node 26. Do not use Node 20 or 22. The CLI's own engines field still lists those. That is not our floor.
 
 Generated project shape:
 

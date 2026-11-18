@@ -50,7 +50,7 @@ If the project copied UniFFI's own Gradle snippet, expect **both** problems at o
 
 | Check | Finding | Action |
 |---|---|---|
-| Node version | 20.x | **EOL.** `firebase-admin` 14 requires ≥ 22. Move to 24 (Active LTS) |
+| Node version | 20 or 22 | Too old. Move to 26. Node 24 is only the GitHub Actions runtime |
 | `bullmq` major | 5.x | Run the v6 tripwire list below |
 | `ioredis` in dependencies | absent | v6 made it an optional peer dependency — add it explicitly |
 | `grep -rn 'node-apn'` | bare `node-apn` | Dead since 2020 → `@parse/node-apn` |
@@ -92,7 +92,7 @@ Do not bump everything at once. This order keeps each failure attributable:
 2. **UniFFI** to `=0.32.1`, one minor at a time if coming from ≤ 0.30, applying each release's migrations. Regenerate bindings and rebuild both hosts after each step. A stale call site fails that compile. A checksum mismatch does not: it is thrown when the library loads.
 3. **Android**: keep the AGP, Gradle, JDK, and Kotlin in the user's project. Apply the detection table for APIs that version removed. Do not bump those tools unless the user asks.
 4. **Apple**: keep the user's Xcode. If it is Xcode 27, a macOS 11 or watchOS 8 target will not build, and on-device debugging starts at iOS 17.
-5. **Node**, only if a service exists: Node → 24, then `firebase-admin` → 14, then BullMQ → 6 with `ioredis` added explicitly.
+5. **Node**, only if a service exists: Node → 26, then `firebase-admin` → 14, then BullMQ → 6 with `ioredis` added explicitly.
 
 After each step, re-run the verification gates in bootstrap.md.
 

@@ -6,8 +6,8 @@ Verified 2026-09-19 against Apple and Google primary documentation. Library pins
 
 ## Libraries
 
-- **APNs: `@parse/node-apn` 8.1.0.** Maintained; supports Node 20/22/24.
-- **FCM: `firebase-admin` 14.4.0.** Requires Node ≥ 22.
+- **APNs: `@parse/node-apn` 8.2.0.** Maintained. Runs on Node 26. 8.1.0 does not.
+- **FCM: `firebase-admin` 14.4.0.** Runs on Node 26.
 - **Never `node-apn`.** Abandoned at 3.0.0 from November 2020, still declaring Node 4.6 support. The maintained fork is the Parse Community one.
 
 `apns2` 12.2.0 is a viable alternative but has not released since May 2025.
